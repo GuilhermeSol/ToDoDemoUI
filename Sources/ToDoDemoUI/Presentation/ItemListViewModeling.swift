@@ -12,6 +12,13 @@ public protocol ItemListViewModeling: ObservableObject {
     var items: [Item] { get }
     var inputText: String { get set }
     var errorMessage: String? { get }
+    var loadErrorMessage: String? { get }
+    var showLoadMoreRetry: Bool { get }
+    var hasLoaded: Bool { get }
     func addTapped() async
     func dismissError()
+    func load() async
+    func retryLoad() async
+    func retryLoadMore() async
+    func loadNextPageIfNeeded(after item: Item) async
 }
