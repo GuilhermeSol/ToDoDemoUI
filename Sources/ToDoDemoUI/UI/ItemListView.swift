@@ -36,7 +36,7 @@ public struct ItemListView<ViewModel: ItemListViewModeling>: View {
             } else {
                 List {
                     ForEach(viewModel.items) { item in
-                        ItemRowView(item: item)
+                        ItemRowView(item: item, onToggle: { Task { await viewModel.toggleTapped(item) } })
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
                             .onAppear {
@@ -109,6 +109,12 @@ private struct PreviewItem: ItemDisplayable {
     let id = UUID()
     var title: String = ""
     var isCompleted: Bool = false
+
+    func withCompletion(_ isCompleted: Bool) -> Self {
+        var copy = self
+        copy.isCompleted = isCompleted
+        return copy
+    }
 }
 
 private struct PreviewItemPager: ItemPaging {
@@ -129,6 +135,11 @@ private struct PreviewItemDeleter: ItemDeleting {
     func delete(id: PreviewItem.ID) async throws {}
 }
 
+private struct PreviewItemToggler: ItemToggling {
+    typealias Item = PreviewItem
+    func toggle(id: PreviewItem.ID) async throws {}
+}
+
 private struct PreviewFailingPager: ItemPaging {
     private struct PreviewLoadError: Error {}
     func fetchPage(offset: Int, limit: Int) async throws -> ItemPage<PreviewItem> {
@@ -137,7 +148,7 @@ private struct PreviewFailingPager: ItemPaging {
 }
 
 #Preview("Empty") {
-    ItemListView(viewModel: ItemListViewModel(pager: PreviewItemPager(items: []), adder: PreviewItemAdder(), deleter: PreviewItemDeleter()))
+    ItemListView(viewModel: ItemListViewModel(pager: PreviewItemPager(items: []), adder: PreviewItemAdder(), deleter: PreviewItemDeleter(), toggler: PreviewItemToggler()))
 }
 
 #Preview("Populated") {
@@ -148,12 +159,13 @@ private struct PreviewFailingPager: ItemPaging {
             PreviewItem(title: "Buy oat milk", isCompleted: false),
         ]),
         adder: PreviewItemAdder(),
-        deleter: PreviewItemDeleter()
+        deleter: PreviewItemDeleter(),
+        toggler: PreviewItemToggler()
     ))
 }
 
 #Preview("Load Error") {
-    ItemListView(viewModel: ItemListViewModel(pager: PreviewFailingPager(), adder: PreviewItemAdder(), deleter: PreviewItemDeleter()))
+    ItemListView(viewModel: ItemListViewModel(pager: PreviewFailingPager(), adder: PreviewItemAdder(), deleter: PreviewItemDeleter(), toggler: PreviewItemToggler()))
 }
 
 #Preview("Load More Retry") {
@@ -163,7 +175,8 @@ private struct PreviewFailingPager: ItemPaging {
             PreviewItem(title: "Reply to Sam", isCompleted: true),
         ]),
         adder: PreviewItemAdder(),
-        deleter: PreviewItemDeleter()
+        deleter: PreviewItemDeleter(),
+        toggler: PreviewItemToggler()
     )
     viewModel.showLoadMoreRetry = true
     return ItemListView(viewModel: viewModel)

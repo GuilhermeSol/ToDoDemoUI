@@ -11,6 +11,12 @@ struct FakeItem: ItemDisplayable {
     let id = UUID()
     var title: String = ""
     var isCompleted: Bool = false
+
+    func withCompletion(_ isCompleted: Bool) -> Self {
+        var copy = self
+        copy.isCompleted = isCompleted
+        return copy
+    }
 }
 
 struct StubItemPager<Item: ItemDisplayable>: ItemPaging {
@@ -76,6 +82,16 @@ struct GatedItemDeleter<Item: ItemDisplayable>: ItemDeleting {
         await spy?.record()
         await entered.fire()
         await release.wait()
+    }
+}
+
+struct StubItemToggler<Item: ItemDisplayable>: ItemToggling {
+    let result: Result<Void, TestError>
+    var spy: CallSpy?
+
+    func toggle(id: Item.ID) async throws {
+        await spy?.record()
+        try result.get()
     }
 }
 
@@ -154,21 +170,21 @@ actor GatedItemPager<Item: ItemDisplayable>: ItemPaging {
 struct ItemListViewModelTests {
     @Test("Given a provider with no items, when reading emptyMessage, then it reads 'no items'")
     func test_emptyMessage_whenProviderReturnsNoItems() {
-        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
 
         #expect(viewModel.emptyMessage == "no items")
     }
 
     @Test("Given a provider with items, when reading emptyMessage, then it reads 'no items'")
     func test_emptyMessage_whenProviderReturnsItems() {
-        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [FakeItem(), FakeItem()], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [FakeItem(), FakeItem()], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
 
         #expect(viewModel.emptyMessage == "no items")
     }
 
     @Test("Given non-empty text in the input bar, when addTapped is called and the adder throws, then errorMessage is set, items is unchanged, and inputText is preserved")
     func testAddTapped_whenSaveFails_setsErrorAndPreservesInput() async {
-        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         viewModel.inputText = "Buy oat milk"
 
         await viewModel.addTapped()
@@ -180,7 +196,7 @@ struct ItemListViewModelTests {
 
     @Test("Given a save-failure error is currently shown, when dismissError is called, then errorMessage is cleared while inputText is preserved")
     func testDismissError_clearsErrorWhileKeepingInputText() async {
-        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         viewModel.inputText = "Buy oat milk"
         await viewModel.addTapped()
 
@@ -193,7 +209,7 @@ struct ItemListViewModelTests {
     @Test("Given the input bar is empty, when addTapped is called, then the adder is never invoked and items stays unchanged")
     func testAddTapped_withEmptyInput_doesNothing() async {
         let spy = CallSpy()
-        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError()), spy: spy), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError()), spy: spy), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         viewModel.inputText = ""
 
         await viewModel.addTapped()
@@ -205,7 +221,7 @@ struct ItemListViewModelTests {
     @Test("Given the input bar contains only whitespace, when addTapped is called, then the adder is never invoked and inputText is not cleared")
     func testAddTapped_withWhitespaceOnlyInput_doesNothing() async {
         let spy = CallSpy()
-        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError()), spy: spy), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError()), spy: spy), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         viewModel.inputText = "   "
 
         await viewModel.addTapped()
@@ -217,7 +233,7 @@ struct ItemListViewModelTests {
     @Test("Given text with leading/trailing whitespace, when addTapped is called, then the adder receives the trimmed title")
     func testAddTapped_trimsWhitespaceBeforeSaving() async {
         let spy = CallSpy()
-        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .success(FakeItem(title: "Buy oat milk")), spy: spy), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .success(FakeItem(title: "Buy oat milk")), spy: spy), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         viewModel.inputText = "  Buy oat milk  "
 
         await viewModel.addTapped()
@@ -233,7 +249,8 @@ struct ItemListViewModelTests {
         let viewModel = ItemListViewModel(
             pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))),
             adder: GatedItemAdder(entered: entered, release: release, result: FakeItem(title: "Buy oat milk"), spy: spy),
-            deleter: StubItemDeleter<FakeItem>(result: .failure(TestError()))
+            deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())),
+            toggler: StubItemToggler<FakeItem>(result: .success(()))
         )
         viewModel.inputText = "Buy oat milk"
 
@@ -251,7 +268,7 @@ struct ItemListViewModelTests {
     @Test("Given non-empty text in the input bar, when addTapped is called and the adder succeeds, then the returned item is appended to items and inputText is cleared")
     func testAddTapped_withValidText_appendsItemAndClearsInput() async {
         let newItem = FakeItem(title: "Buy oat milk")
-        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .success(newItem)), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .success(newItem)), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         viewModel.inputText = "Buy oat milk"
 
         await viewModel.addTapped()
@@ -264,7 +281,7 @@ struct ItemListViewModelTests {
     func testAddTapped_appendsNewItemAfterExistingItems() async {
         let existingItem = FakeItem(title: "Reply to Sam")
         let newItem = FakeItem(title: "Buy oat milk")
-        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [existingItem], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .success(newItem)), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [existingItem], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .success(newItem)), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
         viewModel.inputText = "Buy oat milk"
 
@@ -275,7 +292,7 @@ struct ItemListViewModelTests {
 
     @Test("Given zero saved to-dos exist, when the screen loads, then the existing empty-state message is shown with no error or retry control")
     func testLoad_zeroItems_showsEmptyStateNoError() async {
-        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
 
         await viewModel.load()
 
@@ -285,7 +302,7 @@ struct ItemListViewModelTests {
 
     @Test("Given a freshly constructed view model, when load completes successfully, then hasLoaded transitions from false to true")
     func testHasLoaded_beforeAndAfterLoad() async {
-        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
 
         #expect(viewModel.hasLoaded == false)
 
@@ -296,7 +313,7 @@ struct ItemListViewModelTests {
 
     @Test("Given the initial fetch fails, when the screen loads, then a full-screen error message is shown instead of the list")
     func testLoad_whenFetchFails_setsLoadErrorMessage() async {
-        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .failure(TestError())), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .failure(TestError())), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
 
         await viewModel.load()
 
@@ -309,7 +326,7 @@ struct ItemListViewModelTests {
         let existingItem = FakeItem(title: "Reply to Sam")
         let newItem = FakeItem(title: "Buy oat milk")
         let pager = SequencedItemPager<FakeItem>(results: [.failure(TestError()), .success(ItemPage(items: [existingItem, newItem], hasMore: false))])
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
 
         await viewModel.retryLoad()
@@ -321,7 +338,7 @@ struct ItemListViewModelTests {
     @Test("Given the full-screen error state is shown, when the user taps Retry and the fetch fails again, then the full-screen error state remains shown")
     func testRetryLoad_whenFetchFailsAgain_keepsLoadErrorMessage() async {
         let pager = SequencedItemPager<FakeItem>(results: [.failure(TestError())])
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
 
         await viewModel.retryLoad()
@@ -334,7 +351,7 @@ struct ItemListViewModelTests {
     func testLoadNextPageIfNeeded_whenFetchFails_keepsItemsAndShowsRetryRow() async {
         let page1Items = (0..<30).map { FakeItem(title: "Item \($0)") }
         let pager = SequencedItemPager<FakeItem>(results: [.success(ItemPage(items: page1Items, hasMore: true)), .failure(TestError())])
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
 
         await viewModel.loadNextPageIfNeeded(after: viewModel.items.last!)
@@ -352,7 +369,7 @@ struct ItemListViewModelTests {
             .failure(TestError()),
             .success(ItemPage(items: page2Items, hasMore: false))
         ])
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
         await viewModel.loadNextPageIfNeeded(after: viewModel.items.last!)
 
@@ -369,7 +386,7 @@ struct ItemListViewModelTests {
             .success(ItemPage(items: page1Items, hasMore: true)),
             .failure(TestError())
         ])
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
         await viewModel.loadNextPageIfNeeded(after: viewModel.items.last!)
 
@@ -383,7 +400,7 @@ struct ItemListViewModelTests {
     func testLoad_returnsFirstPageOfThirtyItems() async {
         let items = (1...30).map { FakeItem(title: "Item \($0)") }
         let pager = SequencedItemPager<FakeItem>(results: [.success(ItemPage(items: items, hasMore: true))])
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
 
         await viewModel.load()
 
@@ -395,7 +412,7 @@ struct ItemListViewModelTests {
     func testLoad_exactlyThirtyItems_noFurtherFetchTriggered() async {
         let items = (0..<30).map { FakeItem(title: "Item \($0)") }
         let pager = SequencedItemPager<FakeItem>(results: [.success(ItemPage(items: items, hasMore: false))])
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
 
         await viewModel.load()
         await viewModel.loadNextPageIfNeeded(after: viewModel.items.last!)
@@ -408,7 +425,7 @@ struct ItemListViewModelTests {
     func testLoad_fewerThanOnePage_displaysAllItemsWithNoMoreToLoad() async {
         let items = (0..<10).map { FakeItem(title: "Item \($0)") }
         let pager = SequencedItemPager<FakeItem>(results: [.success(ItemPage(items: items, hasMore: false))])
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
 
         await viewModel.load()
         await viewModel.loadNextPageIfNeeded(after: viewModel.items.last!)
@@ -425,7 +442,7 @@ struct ItemListViewModelTests {
             .success(ItemPage(items: page1Items, hasMore: true)),
             .success(ItemPage(items: page2Items, hasMore: false))
         ])
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
 
         await viewModel.load()
         await viewModel.loadNextPageIfNeeded(after: viewModel.items.last!)
@@ -443,7 +460,7 @@ struct ItemListViewModelTests {
             .success(ItemPage(items: page1Items, hasMore: true)),
             .success(ItemPage(items: page2Items, hasMore: false))
         ])
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
 
         await viewModel.loadNextPageIfNeeded(after: viewModel.items.last!)
@@ -463,7 +480,7 @@ struct ItemListViewModelTests {
             entered: entered,
             release: release
         )
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
         let lastItem = viewModel.items.last!
 
@@ -491,7 +508,7 @@ struct ItemListViewModelTests {
             entered: entered,
             release: release
         )
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .success(newItem)), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .success(newItem)), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
         let lastItem = viewModel.items.last!
 
@@ -511,7 +528,7 @@ struct ItemListViewModelTests {
     func testDeleteTapped_whenSucceeds_removesItemFromList() async {
         let itemToDelete = FakeItem(title: "Water the plants")
         let pager = StubItemPager<FakeItem>(result: .success(ItemPage(items: [itemToDelete], hasMore: false)))
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .success(())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .success(())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
 
         await viewModel.deleteTapped(itemToDelete)
@@ -524,7 +541,7 @@ struct ItemListViewModelTests {
     func testDeleteTapped_onLastRemainingItem_satisfiesEmptyStateCondition() async {
         let lastItem = FakeItem(title: "Reply to Sam")
         let pager = StubItemPager<FakeItem>(result: .success(ItemPage(items: [lastItem], hasMore: false)))
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .success(())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .success(())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
 
         await viewModel.deleteTapped(lastItem)
@@ -541,7 +558,7 @@ struct ItemListViewModelTests {
             .success(ItemPage(items: page1Items, hasMore: true)),
             .success(ItemPage(items: page2Items, hasMore: false))
         ])
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .success(())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .success(())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
         let originalLastItem = viewModel.items.last!
 
@@ -557,7 +574,7 @@ struct ItemListViewModelTests {
     func testDeleteTapped_whenFails_setsDeleteErrorAndKeepsItem() async {
         let item = FakeItem(title: "Buy oat milk")
         let pager = StubItemPager<FakeItem>(result: .success(ItemPage(items: [item], hasMore: false)))
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
 
         await viewModel.deleteTapped(item)
@@ -570,7 +587,7 @@ struct ItemListViewModelTests {
     func testDismissDeleteError_clearsDeleteErrorMessage() async {
         let item = FakeItem(title: "Buy oat milk")
         let pager = StubItemPager<FakeItem>(result: .success(ItemPage(items: [item], hasMore: false)))
-        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())))
+        let viewModel = ItemListViewModel(pager: pager, adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(())))
         await viewModel.load()
         await viewModel.deleteTapped(item)
 
@@ -590,7 +607,8 @@ struct ItemListViewModelTests {
         let viewModel = ItemListViewModel(
             pager: pager,
             adder: StubItemAdder<FakeItem>(result: .failure(TestError())),
-            deleter: GatedItemDeleter<FakeItem>(entered: entered, release: release, spy: spy)
+            deleter: GatedItemDeleter<FakeItem>(entered: entered, release: release, spy: spy),
+            toggler: StubItemToggler<FakeItem>(result: .success(()))
         )
         await viewModel.load()
 
@@ -602,6 +620,78 @@ struct ItemListViewModelTests {
         await firstTask.value
         await secondTask.value
 
+        #expect(await spy.callCount == 1)
+    }
+
+    @Test("Given an incomplete to-do in the list, when toggleTapped is called and the toggler throws, then the item stays marked complete and neither errorMessage nor deleteErrorMessage is set")
+    func testToggleTapped_whenTogglerThrows_keepsToggledStateAndShowsNoError() async {
+        let item = FakeItem(title: "Buy oat milk", isCompleted: false)
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [item], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .failure(TestError())))
+        await viewModel.load()
+
+        await viewModel.toggleTapped(item)
+
+        #expect(viewModel.items.first?.isCompleted == true)
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.deleteErrorMessage == nil)
+    }
+
+    @Test("Given a to-do that was just deleted from the list, when toggleTapped is called for it and the toggler throws, then the toggler is still invoked once and no error message is set")
+    func testToggleTapped_whenItemWasAlreadyDeleted_stillCallsTogglerAndShowsNoError() async {
+        let item = FakeItem(title: "Water the plants")
+        let spy = CallSpy()
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [item], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .success(())), toggler: StubItemToggler<FakeItem>(result: .failure(TestError()), spy: spy))
+        await viewModel.load()
+        await viewModel.deleteTapped(item)
+
+        await viewModel.toggleTapped(item)
+
+        #expect(await spy.callCount == 1)
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.deleteErrorMessage == nil)
+        #expect(viewModel.items.isEmpty)
+    }
+
+    @Test("Given an incomplete to-do, when the user taps its checkbox twice rapidly with the same row value, then it ends incomplete and the toggler is called twice")
+    func testToggleTapped_twiceWithSameRowValue_endsInOriginalStateAndCallsTogglerTwice() async {
+        let item = FakeItem(title: "Reply to Sam", isCompleted: false)
+        let spy = CallSpy()
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [item], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(()), spy: spy))
+        await viewModel.load()
+
+        await viewModel.toggleTapped(item)
+        await viewModel.toggleTapped(item)
+
+        #expect(viewModel.items.first?.isCompleted == false)
+        #expect(await spy.callCount == 2)
+    }
+
+    @Test("Given a completed to-do in the list, when toggleTapped is called, then the item becomes incomplete and the toggler is called once")
+    func testToggleTapped_onCompletedItem_marksIncompleteAndCallsToggler() async {
+        let item = FakeItem(title: "Buy oat milk", isCompleted: true)
+        let spy = CallSpy()
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [item], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(()), spy: spy))
+        await viewModel.load()
+
+        await viewModel.toggleTapped(item)
+
+        #expect(viewModel.items.first?.isCompleted == false)
+        #expect(viewModel.items.first?.id == item.id)
+        #expect(await spy.callCount == 1)
+    }
+
+    @Test("Given an incomplete to-do in the list next to another to-do, when toggleTapped is called on it, then only that item becomes complete and the toggler is called once")
+    func testToggleTapped_onIncompleteItem_marksCompleteAndCallsToggler() async {
+        let item = FakeItem(title: "Water the plants", isCompleted: false)
+        let other = FakeItem(title: "Reply to Sam", isCompleted: false)
+        let spy = CallSpy()
+        let viewModel = ItemListViewModel(pager: StubItemPager<FakeItem>(result: .success(ItemPage(items: [item, other], hasMore: false))), adder: StubItemAdder<FakeItem>(result: .failure(TestError())), deleter: StubItemDeleter<FakeItem>(result: .failure(TestError())), toggler: StubItemToggler<FakeItem>(result: .success(()), spy: spy))
+        await viewModel.load()
+
+        await viewModel.toggleTapped(item)
+
+        #expect(viewModel.items.map(\.isCompleted) == [true, false])
+        #expect(viewModel.items.map(\.id) == [item.id, other.id])
         #expect(await spy.callCount == 1)
     }
 }

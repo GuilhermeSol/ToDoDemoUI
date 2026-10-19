@@ -11,12 +11,23 @@ private extension Color {
 
 public struct CircularCheckbox: View {
     private let isChecked: Bool
+    private let onTap: (() -> Void)?
 
-    public init(isChecked: Bool) {
+    public init(isChecked: Bool, onTap: (() -> Void)? = nil) {
         self.isChecked = isChecked
+        self.onTap = onTap
     }
 
     public var body: some View {
+        if let onTap {
+            Button(action: onTap) { circle }
+                .buttonStyle(.plain)
+        } else {
+            circle
+        }
+    }
+
+    private var circle: some View {
         ZStack {
             Circle()
                 .fill(isChecked ? Color.accentTint : Color.clear)

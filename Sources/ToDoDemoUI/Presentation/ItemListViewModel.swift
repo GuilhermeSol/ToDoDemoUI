@@ -7,10 +7,11 @@ import Combine
 import Foundation
 
 @MainActor
-public final class ItemListViewModel<Pager: ItemPaging, Adder: ItemAdding, Deleter: ItemDeleting>: ItemListViewModeling where Pager.Item == Adder.Item, Pager.Item == Deleter.Item {
+public final class ItemListViewModel<Pager: ItemPaging, Adder: ItemAdding, Deleter: ItemDeleting, Toggler: ItemToggling>: ItemListViewModeling where Pager.Item == Adder.Item, Pager.Item == Deleter.Item, Pager.Item == Toggler.Item {
     private let pager: Pager
     private let adder: Adder
     private let deleter: Deleter
+    private let toggler: Toggler
 
     @Published public var items: [Pager.Item] = []
     @Published public var inputText: String = ""
@@ -25,10 +26,11 @@ public final class ItemListViewModel<Pager: ItemPaging, Adder: ItemAdding, Delet
     private var hasMore = false
     private var deletingItemIDs: Set<Pager.Item.ID> = []
 
-    public init(pager: Pager, adder: Adder, deleter: Deleter) {
+    public init(pager: Pager, adder: Adder, deleter: Deleter, toggler: Toggler) {
         self.pager = pager
         self.adder = adder
         self.deleter = deleter
+        self.toggler = toggler
     }
 
     public var emptyMessage: String {
@@ -80,6 +82,13 @@ public final class ItemListViewModel<Pager: ItemPaging, Adder: ItemAdding, Delet
         } catch {
             deleteErrorMessage = Strings.deleteFailureMessage
         }
+    }
+
+    public func toggleTapped(_ item: Pager.Item) async {
+        if let index = items.firstIndex(where: { $0.id == item.id }) {
+            items[index] = items[index].withCompletion(!items[index].isCompleted)
+        }
+        try? await toggler.toggle(id: item.id)
     }
 
     public func dismissDeleteError() {
