@@ -6,4 +6,5 @@
 public protocol ItemDisplayable: Identifiable, Sendable {
     var title: String { get }
     var isCompleted: Bool { get }
+    func withCompletion(_ isCompleted: Bool) -> Self
 }

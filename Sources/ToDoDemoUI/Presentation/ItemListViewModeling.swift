@@ -19,6 +19,7 @@ public protocol ItemListViewModeling: ObservableObject {
     func addTapped() async
     func dismissError()
     func deleteTapped(_ item: Item) async
+    func toggleTapped(_ item: Item) async
     func dismissDeleteError()
     func load() async
     func retryLoad() async
