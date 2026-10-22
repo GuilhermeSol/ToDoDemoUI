@@ -5,10 +5,6 @@
 
 import SwiftUI
 
-private extension Color {
-    static let accentTint = Color(red: 0.78, green: 0.44, blue: 0.32)
-}
-
 public struct TextInputBar: View {
     @Binding private var text: String
     private let placeholder: String

@@ -28,6 +28,17 @@ struct ColorsTests {
         #expect(!isEqual(onAccent, (r: 0, g: 0, b: 0), tolerance: 0.01))
     }
 
+    @Test("Given the orange accent token, when it is resolved in light and in dark mode, then both values are the same orange")
+    func testAccentTintIsIdenticalInLightAndDark() {
+        let light = rgb(UIColor(Color.accentTint), in: UITraitCollection(userInterfaceStyle: .light))
+        let dark = rgb(UIColor(Color.accentTint), in: UITraitCollection(userInterfaceStyle: .dark))
+        let orange: RGB = (r: 0.78, g: 0.44, b: 0.32)
+
+        #expect(isEqual(light, dark, tolerance: 0.01))
+        #expect(isEqual(light, orange, tolerance: 0.01))
+        #expect(isEqual(dark, orange, tolerance: 0.01))
+    }
+
     private typealias RGB = (r: CGFloat, g: CGFloat, b: CGFloat)
 
     private func rgb(_ color: UIColor, in traits: UITraitCollection) -> RGB {
