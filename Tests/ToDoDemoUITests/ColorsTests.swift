@@ -39,6 +39,15 @@ struct ColorsTests {
         #expect(isEqual(dark, orange, tolerance: 0.01))
     }
 
+    @Test("Given the device is in light mode, when the card background is resolved, then it is white")
+    func testCardBackgroundIsWhiteInLightMode() {
+        let light = UITraitCollection(userInterfaceStyle: .light)
+
+        let card = rgb(UIColor(Color.cardBackground), in: light)
+
+        #expect(isEqual(card, (r: 1, g: 1, b: 1), tolerance: 0.01))
+    }
+
     private typealias RGB = (r: CGFloat, g: CGFloat, b: CGFloat)
 
     private func rgb(_ color: UIColor, in traits: UITraitCollection) -> RGB {
