@@ -39,13 +39,15 @@ struct ColorsTests {
         #expect(isEqual(dark, orange, tolerance: 0.01))
     }
 
-    @Test("Given the device is in light mode, when the card background is resolved, then it is white")
-    func testCardBackgroundIsWhiteInLightMode() {
+    @Test("Given the device is in light mode, when the card background is resolved, then it is the light gray F2F2F7 and differs from the white page")
+    func testCardBackgroundIsLightGrayInLightMode() {
         let light = UITraitCollection(userInterfaceStyle: .light)
 
         let card = rgb(UIColor(Color.cardBackground), in: light)
+        let page = rgb(UIColor.systemBackground, in: light)
 
-        #expect(isEqual(card, (r: 1, g: 1, b: 1), tolerance: 0.01))
+        #expect(isEqual(card, (r: 242 / 255, g: 242 / 255, b: 247 / 255), tolerance: 0.01))
+        #expect(!isEqual(card, page, tolerance: 0.01))
     }
 
     @Test("Given the text color on an orange button, when it is resolved in light and in dark mode, then it is white in both")
