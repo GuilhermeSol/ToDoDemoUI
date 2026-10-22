@@ -19,6 +19,15 @@ struct ColorsTests {
         #expect(!isEqual(card, page, tolerance: 0.01))
     }
 
+    @Test("Given the device is in dark mode, when the text color on an orange button is resolved, then it is not black")
+    func testOnAccentIsNotBlackInDarkMode() {
+        let dark = UITraitCollection(userInterfaceStyle: .dark)
+
+        let onAccent = rgb(UIColor(Color.onAccent), in: dark)
+
+        #expect(!isEqual(onAccent, (r: 0, g: 0, b: 0), tolerance: 0.01))
+    }
+
     private typealias RGB = (r: CGFloat, g: CGFloat, b: CGFloat)
 
     private func rgb(_ color: UIColor, in traits: UITraitCollection) -> RGB {
