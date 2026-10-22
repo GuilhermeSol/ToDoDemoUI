@@ -21,14 +21,14 @@ public struct TextInputBar: View {
             TextField(placeholder, text: $text)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(Color.white)
+                .background(Color.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .onSubmit(onSubmit)
 
             Button(action: onSubmit) {
                 Image(systemName: "plus")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.onAccent)
                     .frame(width: 44, height: 44)
                     .background(Color.accentTint)
                     .clipShape(Circle())
@@ -49,5 +49,11 @@ private struct TextInputBarPreviewContainer: View {
 
 #Preview {
     TextInputBarPreviewContainer()
+}
+
+#Preview("Dark") {
+    TextInputBarPreviewContainer()
+        .background(Color(uiColor: .systemBackground))
+        .environment(\.colorScheme, .dark)
 }
 #endif

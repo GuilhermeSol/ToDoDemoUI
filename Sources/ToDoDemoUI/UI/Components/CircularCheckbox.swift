@@ -32,7 +32,7 @@ public struct CircularCheckbox: View {
             if isChecked {
                 Image(systemName: "checkmark")
                     .font(.caption.bold())
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.onAccent)
             }
         }
         .frame(width: 24, height: 24)

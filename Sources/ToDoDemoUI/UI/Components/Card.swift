@@ -16,7 +16,7 @@ public struct Card<Content: View>: View {
         content
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
@@ -27,5 +27,14 @@ public struct Card<Content: View>: View {
         Text("Buy oat milk")
     }
     .padding()
+}
+
+#Preview("Dark") {
+    Card {
+        Text("Buy oat milk")
+    }
+    .padding()
+    .background(Color(uiColor: .systemBackground))
+    .environment(\.colorScheme, .dark)
 }
 #endif
