@@ -48,6 +48,34 @@ struct ColorsTests {
         #expect(isEqual(card, (r: 1, g: 1, b: 1), tolerance: 0.01))
     }
 
+    @Test("Given the text color on an orange button, when it is resolved in light and in dark mode, then it is white in both")
+    func testOnAccentIsWhiteInLightAndDark() {
+        let light = rgb(UIColor(Color.onAccent), in: UITraitCollection(userInterfaceStyle: .light))
+        let dark = rgb(UIColor(Color.onAccent), in: UITraitCollection(userInterfaceStyle: .dark))
+
+        #expect(isEqual(light, (r: 1, g: 1, b: 1), tolerance: 0.01))
+        #expect(isEqual(dark, (r: 1, g: 1, b: 1), tolerance: 0.01))
+    }
+
+    @Test("Given the card background token, when the device mode changes between light and dark, then the same token resolves to a different color")
+    func testCardBackgroundChangesWhenTraitChanges() {
+        let token = UIColor(Color.cardBackground)
+
+        let light = rgb(token, in: UITraitCollection(userInterfaceStyle: .light))
+        let dark = rgb(token, in: UITraitCollection(userInterfaceStyle: .dark))
+
+        #expect(!isEqual(light, dark, tolerance: 0.01))
+    }
+
+    @Test("Given the device is in dark mode, when the card background is resolved, then it is the elevated dark gray 1C1C1E")
+    func testCardBackgroundIsElevatedDarkGrayInDarkMode() {
+        let dark = UITraitCollection(userInterfaceStyle: .dark)
+
+        let card = rgb(UIColor(Color.cardBackground), in: dark)
+
+        #expect(isEqual(card, (r: 28 / 255, g: 28 / 255, b: 30 / 255), tolerance: 0.01))
+    }
+
     private typealias RGB = (r: CGFloat, g: CGFloat, b: CGFloat)
 
     private func rgb(_ color: UIColor, in traits: UITraitCollection) -> RGB {
