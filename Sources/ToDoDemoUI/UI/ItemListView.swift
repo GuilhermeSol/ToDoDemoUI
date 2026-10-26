@@ -39,6 +39,7 @@ public struct ItemListView<ViewModel: ItemListViewModeling>: View {
                         ItemRowView(item: item, onToggle: { Task { await viewModel.toggleTapped(item) } })
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                             .onAppear {
                                 Task { await viewModel.loadNextPageIfNeeded(after: item) }
                             }
@@ -59,9 +60,9 @@ public struct ItemListView<ViewModel: ItemListViewModeling>: View {
                     }
                 }
                 .listStyle(.plain)
-                .listRowSpacing(12)
+                .listRowSpacing(4)
+                .contentMargins(.vertical, 11, for: .scrollContent)
                 .scrollContentBackground(.hidden)
-                .padding(.horizontal)
             }
 
             TextInputBar(text: $viewModel.inputText, placeholder: "Add a to-do…") {
