@@ -14,6 +14,11 @@ on:
       - 'release/**'
       - 'hotfix/**'
 
+# A new commit on a PR cancels that PR's older run. Pushes to protected branches always finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build-and-test:
     runs-on: macos-15
